@@ -1,54 +1,180 @@
-<!DOCTYPE html>
-<html>
-<head>
-  <title>Schul-Umkipp-Wettbüro</title>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <!-- p5.js von CDN -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.min.js"></script>
-  <!-- Google Fonts -->
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
-  <style>
-    body { 
-      margin: 0;
-      padding: 0;
-      font-family: 'Poppins', sans-serif;
-      background: linear-gradient(135deg, #ff4d4d 0%, #e53935 100%);
+let nameInput, betInput, submitButton;
+let stats = {
+  totalFalls: 0,
+  bets: [],
+  fallHistory: []
+};
+
+let lastFallTime = 0;
+let fallInterval = 0;
+let currentVictim = "";
+let fallingNow = false;
+let fallAnimationProgress = 0;
+let victims = ["Max", "Lisa", "Tom", "Anna", "Paul", "Julia"];
+
+function setup() {
+  createCanvas(800, 600);
+  textFont('Arial');
+  
+  // UI-Elemente
+  createP('🏫 Schul-Umkipp-Wettbüro 🏫').style('font-size', '24px');
+  
+  nameInput = createInput('');
+  nameInput.attribute('placeholder', 'Dein Name');
+  nameInput.style('width', '200px');
+  
+  betInput = createInput('');
+  betInput.attribute('placeholder', 'Deine Wette (z.B. "Tom in 10 Min")');
+  betInput.style('width', '300px');
+  
+  submitButton = createButton('Wette platzieren');
+  submitButton.mousePressed(placeBet);
+  submitButton.style('background-color', '#4CAF50');
+  submitButton.style('color', 'white');
+  submitButton.style('border', 'none');
+  submitButton.style('padding', '8px 16px');
+  
+  // Zufälliges Umkippen initialisieren
+  fallInterval = random(10000, 20000);
+  lastFallTime = millis();
+}
+
+function draw() {
+  background(240);
+  
+  // Header
+  fill(50);
+  textSize(24);
+  text('🏫 Schul-Umkipp-Wettbüro 🏫', 20, 40);
+  
+  // Statistik-Box
+  drawStats();
+  
+  // Wetten-Liste
+  drawBets();
+  
+  // Umkipp-Simulation
+  if (millis() - lastFallTime > fallInterval && !fallingNow) {
+    startFall();
+  }
+  
+  // Fall-Animation
+  if (fallingNow) {
+    drawFallAnimation();
+  }
+}
+
+function drawStats() {
+  fill(255);
+  stroke(100);
+  strokeWeight(1);
+  rect(20, 60, 760, 100, 10);
+  
+  fill(0);
+  textSize(18);
+  text('📊 Statistiken:', 30, 85);
+  
+  textSize(16);
+  text('Heutige Umkipper: ' + stats.totalFalls, 30, 110);
+  
+  if (stats.totalFalls > 0) {
+    text('Letztes Opfer: ' + stats.fallHistory[stats.fallHistory.length-1], 30, 135);
+  }
+}
+
+function drawBets() {
+  fill(255);
+  stroke(100);
+  strokeWeight(1);
+  rect(20, 180, 760, 300, 10);
+  
+  fill(0);
+  textSize(18);
+  text('📋 Aktive Wetten:', 30, 205);
+  
+  textSize(14);
+  let startY = 230;
+  let visibleBets = min(10, stats.bets.length);
+  
+  // Nur die letzten 10 Wetten anzeigen
+  for (let i = max(0, stats.bets.length-10); i < stats.bets.length; i++) {
+    let bet = stats.bets[i];
+    let yPos = startY + (i - max(0, stats.bets.length-10)) * 25;
+    text((i+1) + '. ' + bet.name + ' wettet: "' + bet.bet + '"', 40, yPos);
+  }
+  
+  if (stats.bets.length > 10) {
+    fill(100);
+    textSize(12);
+    text('... ' + (stats.bets.length - 10) + ' weitere Wetten ...', 40, startY + visibleBets * 25 + 10);
+  }
+}
+
+function startFall() {
+  fallingNow = true;
+  fallAnimationProgress = 0;
+  currentVictim = random(victims);
+}
+
+function drawFallAnimation() {
+  fallAnimationProgress += 2;
+  
+  push();
+  translate(width/2, 200);
+  rotate(radians(min(90, fallAnimationProgress)));
+  fill(200, 50, 50);
+  textSize(32);
+  textAlign(CENTER, CENTER);
+  text(currentVictim + " kippt um!", 0, 0);
+  pop();
+  
+  if (fallAnimationProgress >= 90) {
+    finishFall();
+  }
+}
+
+function finishFall() {
+  fallingNow = false;
+  stats.totalFalls++;
+  stats.fallHistory.push(currentVictim + " um " + getTimeString());
+  lastFallTime = millis();
+  fallInterval = random(10000, 30000);
+  
+  // Prüfe ob jemand richtig gewettet hat
+  checkWinningBets();
+}
+
+function checkWinningBets() {
+  // Vereinfachte Logik: Wetten mit dem Namen des Opfers sind "richtig"
+  for (let bet of stats.bets) {
+    if (bet.bet.includes(currentVictim)) {
+      // Hier könntest du Gewinner markieren oder Punkte vergeben
+      console.log(bet.name + " hat richtig gewettet!");
     }
-    #container {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-    }
-  </style>
-</head>
-<body>
-  <div id="container"></div>
-  <script>
-    // p5.js im "instance mode" für bessere Kontrolle
-    const sketch = (p) => {
-      p.preload = () => {
-        // Lade Assets hier falls benötigt
-      };
+  }
+}
 
-      p.setup = () => {
-        const canvas = p.createCanvas(p.windowWidth, p.windowHeight);
-        canvas.parent('container');
-        canvas.style('display', 'block');
-        
-        // DEIN KOMPLETTER CODE HIER (aus sketch.js)
-        // ersetze alle "create..." mit "p.create..."
-        // ersetze alle Funktionen mit "p.functionName"
-      };
+function getTimeString() {
+  let now = new Date();
+  return nf(now.getHours(), 2) + ":" + nf(now.getMinutes(), 2) + ":" + nf(now.getSeconds(), 2);
+}
 
-      p.draw = () => {
-        // Dein Draw-Code
-      };
-    };
+function placeBet() {
+  let name = nameInput.value().trim();
+  let bet = betInput.value().trim();
 
-    new p5(sketch);
-  </script>
-</body>
-</html>
+  if (name === '' || bet === '') {
+    alert('Bitte Name und Wette eingeben!');
+    return;
+  }
+
+  stats.bets.push({ 
+    name: name, 
+    bet: bet,
+    time: getTimeString()
+  });
+  
+  nameInput.value('');
+  betInput.value('');
+  nameInput.elt.focus();
+}
