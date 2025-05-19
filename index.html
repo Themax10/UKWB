@@ -136,6 +136,15 @@
             font-size: 16px;
         }
         
+        .input-group {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .input-group input {
+            flex: 1;
+        }
+        
         button {
             padding: 12px 20px;
             background: linear-gradient(135deg, var(--gradient-start), var(--gradient-end));
@@ -188,6 +197,14 @@
         .card-subtitle {
             color: var(--accent);
             font-weight: 600;
+        }
+        
+        .card-subtitle-text {
+            color: var(--accent);
+            font-weight: 400;
+            font-size: 12px;
+            display: block;
+            margin-top: 3px;
         }
         
         .card-content {
@@ -285,6 +302,12 @@
             font-weight: 700;
             color: var(--accent);
         }
+        
+        .stat-subvalue {
+            font-size: 14px;
+            color: var(--accent);
+            font-style: italic;
+        }
 
         .stat-label {
             font-size: 14px;
@@ -307,6 +330,10 @@
             .stat-box {
                 margin-bottom: 10px;
             }
+            
+            .input-group {
+                flex-direction: column;
+            }
         }
     </style>
 </head>
@@ -319,7 +346,7 @@
 
         <div class="tabs">
             <button class="tab active" onclick="showTab('events')">Ereignisse</button>
-            <button class="tab" onclick="showTab('bets')">Meine Wetten</button>
+            <button class="tab" onclick="showTab('bets')">Unsere Wetten</button>
             <button class="tab" onclick="showTab('place-bet')">Wette platzieren</button>
             <button class="tab" onclick="showTab('admin')">Admin</button>
         </div>
@@ -339,7 +366,8 @@
                     <div class="stat-label">Wetten</div>
                 </div>
                 <div class="stat-box">
-                    <div class="stat-value" id="total-stake">0€</div>
+                    <div class="stat-value" id="total-stake-euro">0€</div>
+                    <div class="stat-subvalue" id="total-stake-text"></div>
                     <div class="stat-label">Gesamteinsatz</div>
                 </div>
             </div>
@@ -365,16 +393,15 @@
                             <input type="text" id="bettor-name" required>
                         </div>
                         <div class="form-group">
-                            <label for="event-name-input">Ereignis:</label>
-                            <input type="text" id="event-name-input" required>
-                        </div>
-                        <div class="form-group">
                             <label for="stake">Einsatz:</label>
-                            <input type="text" id="stake" required>
+                            <div class="input-group">
+                                <input type="number" id="stake-euro" placeholder="Euro Betrag" step="0.01" min="0">
+                                <input type="text" id="stake-text" placeholder="oder Texteinsatz">
+                            </div>
                         </div>
                         <div class="form-group">
-                            <label for="prediction-text">Vorhersage:</label>
-                            <input type="text" id="prediction-text" required>
+                            <label for="expected-time">Zeit des Geschehens:</label>
+                            <input type="text" id="expected-time" required>
                         </div>
                         <button type="submit">Wette platzieren</button>
                     </form>
@@ -447,6 +474,19 @@
             document.getElementById('bet-form').addEventListener('submit', handleBetSubmit);
             document.getElementById('event-form').addEventListener('submit', handleEventSubmit);
             document.getElementById('occurrence-form').addEventListener('submit', handleOccurrenceSubmit);
+            
+            // Validierung für Euro- oder Text-Einsatz
+            document.getElementById('stake-euro').addEventListener('input', function() {
+                if (this.value) {
+                    document.getElementById('stake-text').value = '';
+                }
+            });
+            
+            document.getElementById('stake-text').addEventListener('input', function() {
+                if (this.value) {
+                    document.getElementById('stake-euro').value = '';
+                }
+            });
         });
         
         // Tab-Navigation
@@ -530,67 +570,45 @@
             const betList = document.getElementById('bet-list');
             
             if (bets.length === 0) {
-                betList.innerHTML = '<div class="empty-message">Du hast noch keine Wetten platziert.</div>';
+                betList.innerHTML = '<div class="empty-message">Es wurden noch keine Wetten platziert.</div>';
                 return;
             }
             
             betList.innerHTML = '';
             
             bets.forEach(bet => {
-                const event = events.find(e => e.id === bet.eventId);
-                if (!event) return;
+                const event = getEventByName(bet.eventName);
                 
                 const card = document.createElement('div');
                 card.className = 'bet-card';
                 
+                let stakeDisplay = '';
+                if (bet.stakeEuro) {
+                    stakeDisplay = `<span class="card-subtitle">${parseFloat(bet.stakeEuro).toFixed(2)}€</span>`;
+                }
+                if (bet.stakeText) {
+                    stakeDisplay = `<span class="card-subtitle-text">${bet.stakeText}</span>`;
+                }
+                
                 card.innerHTML = `
                     <div class="card-header">
-                        <h3 class="card-title">${event.name}</h3>
-                        <span class="card-subtitle">${bet.stake}</span>
+                        <h3 class="card-title">${bet.eventName}</h3>
+                        ${stakeDisplay}
                     </div>
                     <div class="card-content">
                         <p><strong>Wetter:</strong> ${bet.name}</p>
-                        <p><strong>Vorhersage:</strong> ${bet.predictionText || "Keine Angabe"}</p>
+                        <p><strong>Zeit:</strong> ${bet.expectedTime || "Keine Angabe"}</p>
                         <p><strong>Status:</strong> 
-                            <span class="event-status ${event.occurredDate ? 'status-occurred' : 'status-pending'}">
-                                ${event.occurredDate ? 'Ereignis eingetreten' : 'Warte auf Ereignis'}
+                            <span class="event-status ${event && event.occurredDate ? 'status-occurred' : 'status-pending'}">
+                                ${event && event.occurredDate ? 'Ereignis eingetreten' : 'Warte auf Ereignis'}
                             </span>
                         </p>
-                        ${event.occurredDate ? 
+                        ${event && event.occurredDate ? 
                             `<p><strong>Eingetreten:</strong> ${event.occurrenceText || "Keine Details"}</p>` : ''}
                     </div>
                 `;
                 
                 betList.appendChild(card);
-            });
-        }
-        
-        // EventSelects aktualisieren
-        function populateEventSelects() {
-            const eventSelect = document.getElementById('event-select');
-            const occurrenceSelect = document.getElementById('occurrence-event');
-            
-            // Optionen löschen
-            eventSelect.innerHTML = '<option value="">-- Ereignis auswählen --</option>';
-            occurrenceSelect.innerHTML = '<option value="">-- Ereignis auswählen --</option>';
-            
-            // Aktive Ereignisse für Wetten
-            events.filter(event => !event.occurredDate).forEach(event => {
-                const option = document.createElement('option');
-                option.value = event.id;
-                option.textContent = event.name;
-                eventSelect.appendChild(option);
-            });
-            
-            // Alle Ereignisse für Admin-Panel
-            events.forEach(event => {
-                // Nur Ereignisse, die noch nicht als eingetreten markiert wurden
-                if (!event.occurredDate) {
-                    const option = document.createElement('option');
-                    option.value = event.id;
-                    option.textContent = event.name;
-                    occurrenceSelect.appendChild(option);
-                }
             });
         }
         
@@ -600,13 +618,25 @@
             document.getElementById('occurred-events').textContent = events.filter(e => e.occurredDate).length;
             document.getElementById('total-bets').textContent = bets.length;
             
-            const totalStake = bets.reduce((sum, bet) => {
-                // Versuche, den Einsatz als Zahl zu interpretieren
-                const stakeValue = parseFloat(bet.stake);
+            // Euro-Einsätze berechnen
+            const totalStakeEuro = bets.reduce((sum, bet) => {
+                const stakeValue = parseFloat(bet.stakeEuro || 0);
                 return sum + (isNaN(stakeValue) ? 0 : stakeValue);
             }, 0);
             
-            document.getElementById('total-stake').textContent = isNaN(totalStake) ? "Variiert" : totalStake.toFixed(2) + '€';
+            document.getElementById('total-stake-euro').textContent = totalStakeEuro.toFixed(2) + ' €';
+            
+            // Text-Einsätze sammeln
+            const textStakes = bets
+                .filter(bet => bet.stakeText && bet.stakeText.trim() !== '')
+                .map(bet => bet.stakeText);
+            
+            if (textStakes.length > 0) {
+                document.getElementById('total-stake-text').textContent = 
+                    `+ ${textStakes.length} Text-Einsätze`;
+            } else {
+                document.getElementById('total-stake-text').textContent = '';
+            }
         }
         
         // Wette erstellen
@@ -614,13 +644,20 @@
             e.preventDefault();
             
             const name = document.getElementById('bettor-name').value;
-            const eventName = document.getElementById('event-name-input').value;
-            const stake = document.getElementById('stake').value;
-            const predictionText = document.getElementById('prediction-text').value;
+            const stakeEuro = document.getElementById('stake-euro').value;
+            const stakeText = document.getElementById('stake-text').value;
+            const expectedTime = document.getElementById('expected-time').value;
             
-            // Prüfen, ob das Ereignis bereits existiert oder erstelle ein neues
+            // Sicherstellen, dass mindestens ein Einsatz-Typ vorhanden ist
+            if (!stakeEuro && !stakeText) {
+                showNotification('Bitte einen Euro-Betrag oder einen Text-Einsatz angeben');
+                return;
+            }
+            
+            // Erstelle ein Ereignis, wenn keines existiert
+            const eventName = "Umkippung";
             let eventId;
-            const existingEvent = events.find(e => e.name.toLowerCase() === eventName.toLowerCase());
+            const existingEvent = getEventByName(eventName);
             
             if (existingEvent) {
                 eventId = existingEvent.id;
@@ -642,8 +679,10 @@
                 id: generateId(),
                 name,
                 eventId,
-                stake,
-                predictionText,
+                eventName,
+                stakeEuro: stakeEuro || null,
+                stakeText: stakeText || null,
+                expectedTime,
                 createdAt: new Date().toISOString()
             };
             
@@ -676,7 +715,6 @@
             
             document.getElementById('event-form').reset();
             renderEvents();
-            populateEventSelects();
             updateStats();
             showNotification('Ereignis erfolgreich erstellt');
         }
@@ -689,10 +727,10 @@
             const occurrenceText = document.getElementById('occurrence-text').value;
             
             // Suche nach dem Event mit dem eingegebenen Namen
-            const event = events.find(e => e.name.toLowerCase() === eventName.toLowerCase());
+            const event = getEventByName(eventName);
             
             if (event) {
-                event.occurredDate = new Date().toISOString(); // Aktuelles Datum als Platzhalter
+                event.occurredDate = new Date().toISOString();
                 event.occurrenceText = occurrenceText;
                 saveEvents();
                 
@@ -729,8 +767,16 @@
             return bets.filter(bet => bet.eventId === eventId);
         }
         
+        function getEventByName(name) {
+            return events.find(e => e.name.toLowerCase() === name.toLowerCase());
+        }
+        
+        function getEventById(id) {
+            return events.find(e => e.id === id);
+        }
+        
         function formatDate(date) {
-            return date.toLocaleString('de-DE', {
+            return new Date(date).toLocaleString('de-DE', {
                 day: '2-digit',
                 month: '2-digit',
                 year: 'numeric',
