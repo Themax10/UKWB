@@ -4,41 +4,51 @@
   <title>Schul-Umkipp-Wettbüro</title>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <!-- Lade p5.js LOKAL -->
-  <script src="p5/p5.min.js"></script>
-  <!-- Lade Google Fonts -->
+  <!-- p5.js von CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.min.js"></script>
+  <!-- Google Fonts -->
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
   <style>
     body { 
       margin: 0;
       padding: 0;
-      overflow: hidden;
       font-family: 'Poppins', sans-serif;
+      background: linear-gradient(135deg, #ff4d4d 0%, #e53935 100%);
     }
-    #loading {
+    #container {
       position: fixed;
       top: 0;
       left: 0;
       width: 100%;
       height: 100%;
-      background: linear-gradient(135deg, #ff4d4d 0%, #e53935 100%);
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      color: white;
-      font-size: 24px;
-      z-index: 1000;
     }
   </style>
 </head>
 <body>
-  <div id="loading">Lädt Wettbüro...</div>
-  <script src="sketch.js"></script>
+  <div id="container"></div>
   <script>
-    // Verstecke Loading-Screen wenn fertig
-    window.addEventListener('load', () => {
-      document.getElementById('loading').style.display = 'none';
-    });
+    // p5.js im "instance mode" für bessere Kontrolle
+    const sketch = (p) => {
+      p.preload = () => {
+        // Lade Assets hier falls benötigt
+      };
+
+      p.setup = () => {
+        const canvas = p.createCanvas(p.windowWidth, p.windowHeight);
+        canvas.parent('container');
+        canvas.style('display', 'block');
+        
+        // DEIN KOMPLETTER CODE HIER (aus sketch.js)
+        // ersetze alle "create..." mit "p.create..."
+        // ersetze alle Funktionen mit "p.functionName"
+      };
+
+      p.draw = () => {
+        // Dein Draw-Code
+      };
+    };
+
+    new p5(sketch);
   </script>
 </body>
 </html>
